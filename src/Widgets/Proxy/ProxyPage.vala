@@ -36,11 +36,11 @@ namespace Network.Widgets {
             margin = 24;
             margin_bottom = 12;
 
-            var configuration_page = new ConfigurationPage ();
+            var configuration_page = new ConfigurationPage (control_switch);
             var exceptions_page = new ExecepionsPage ();
 
-            control_switch.bind_property ("active", configuration_page, "sensitive", BindingFlags.SYNC_CREATE);
-            control_switch.bind_property ("active", exceptions_page, "sensitive", BindingFlags.SYNC_CREATE);
+            control_switch.notify["active"].disconnect (control_switch_activated);
+            control_switch.notify["active"].connect (configuration_page.apply_settings);
 
             stack = new Gtk.Stack ();
             stack.add_titled (configuration_page, "configuration", _("Configuration"));
@@ -62,9 +62,6 @@ namespace Network.Widgets {
         }
 
         protected override void control_switch_activated () {
-            if (!control_switch.active) {
-                proxy_settings.mode = "none";
-            }
         }
 
         protected override void update_switch () {
