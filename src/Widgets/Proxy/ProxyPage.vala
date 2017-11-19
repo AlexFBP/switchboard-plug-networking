@@ -39,6 +39,8 @@ namespace Network.Widgets {
             var configuration_page = new ConfigurationPage (control_switch);
             var exceptions_page = new ExecepionsPage ();
 
+            control_switch.bind_property ("active", configuration_page, "sensitive", BindingFlags.SYNC_CREATE| BindingFlags.INVERT_BOOLEAN);
+            control_switch.bind_property ("active", exceptions_page, "sensitive", BindingFlags.SYNC_CREATE | BindingFlags.INVERT_BOOLEAN);
             control_switch.notify["active"].disconnect (control_switch_activated);
             control_switch.notify["active"].connect (configuration_page.apply_settings);
 
