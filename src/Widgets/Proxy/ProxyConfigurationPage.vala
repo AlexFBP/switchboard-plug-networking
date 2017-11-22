@@ -34,10 +34,10 @@ namespace Network.Widgets {
         private Gtk.SpinButton ftp_spin;
         private Gtk.SpinButton socks_spin;
 
-        private Gtk.Switch *enable_sw;
+        private Gtk.Switch root_switch;
 
-        public ConfigurationPage (Gtk.Switch *EnSwitch) {
-          enable_sw=EnSwitch;
+        public ConfigurationPage (Gtk.Switch _root_switch) {
+            root_switch = _root_switch;
             margin_top = 12;
             halign = Gtk.Align.CENTER;
             orientation = Gtk.Orientation.VERTICAL;
@@ -209,9 +209,9 @@ namespace Network.Widgets {
 
         private void verify_applicable () {
             if (auto_button.active) {
-                enable_sw->sensitive = auto_entry.text.strip () != "";
+                root_switch.sensitive = auto_entry.text.strip () != "";
             } else {
-                enable_sw->sensitive = http_entry.text.strip () != "" ||
+                root_switch.sensitive = http_entry.text.strip () != "" ||
                                         https_entry.text.strip () != "" ||
                                         ftp_entry.text.strip () != "" ||
                                         socks_entry.text.strip () != "";
@@ -219,11 +219,10 @@ namespace Network.Widgets {
         }
 
         public void apply_settings () {
-            if (enable_sw->active) {
+            if (root_switch.active) {
                 if (auto_button.active) {
                     proxy_settings.autoconfig_url = auto_entry.text;
                     proxy_settings.mode = "auto";
-
                 } else {
                     http_settings.host = http_entry.text;
                     http_settings.port = (int)http_spin.value;
@@ -236,7 +235,7 @@ namespace Network.Widgets {
                     proxy_settings.mode = "manual";
                 }
             } else {
-              proxy_settings.mode = "none";
+                proxy_settings.mode = "none";
             }
         }
 
