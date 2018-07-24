@@ -36,14 +36,14 @@ namespace Network.Widgets {
 
         private Gtk.Switch root_switch;
 
+        private unowned Network.ProxySettings proxy_settings;
+        private unowned Network.ProxyFTPSettings ftp_settings;
+        private unowned Network.ProxyHTTPSettings http_settings;
+        private unowned Network.ProxyHTTPSSettings https_settings;
+        private unowned Network.ProxySocksSettings socks_settings;
+
         public ConfigurationPage (Gtk.Switch _root_switch) {
             root_switch = _root_switch;
-
-            private unowned Network.ProxySettings proxy_settings;
-            private unowned Network.ProxyFTPSettings ftp_settings;
-            private unowned Network.ProxyHTTPSettings http_settings;
-            private unowned Network.ProxyHTTPSSettings https_settings;
-            private unowned Network.ProxySocksSettings socks_settings;
 
             margin_top = 12;
             halign = Gtk.Align.CENTER;
