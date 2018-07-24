@@ -21,7 +21,7 @@ using Network.Widgets;
 
 namespace Network {
     public class VPNPage : WidgetNMInterface {
-        private DeviceItem owner;
+        public DeviceItem owner { get; construct; }
         private NM.VpnConnection? active_connection = null;
         private VPNMenuItem? active_vpn_item = null;
 
@@ -37,14 +37,16 @@ namespace Network {
         private Gtk.Revealer top_revealer;
         private Gtk.Popover popover;
 
-        public VPNPage (DeviceItem _owner) {
-            owner = _owner;
+        public VPNPage (DeviceItem owner) {
+            Object (
+                owner: owner,
+                title: _("Virtual Private Network"),
+                icon_name: "network-vpn",
+                row_spacing: 0
+            );
+        }
 
-            this.init (null);
-            this.title = _("Virtual Private Network");
-            this.icon_name = "network-vpn";
-
-            row_spacing = 0;
+        construct {
             control_box.margin_bottom = 12;
 
             vpn_info_box = new VPNInfoBox ();
@@ -64,33 +66,17 @@ namespace Network {
             top_revealer.transition_type = Gtk.RevealerTransitionType.SLIDE_DOWN;
             top_revealer.add (connected_frame);
 
-            var no_connections_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 6);
-            no_connections_box.visible = true;
-            no_connections_box.valign = Gtk.Align.CENTER;
-
-            var no_connections_label = new Gtk.Label (_("No VPN Connections"));
-            no_connections_label.valign = Gtk.Align.CENTER;
-            no_connections_label.wrap = true;
-            no_connections_label.wrap_mode = Pango.WrapMode.WORD_CHAR;
-            no_connections_label.max_width_chars = 30;
-            no_connections_label.justify = Gtk.Justification.CENTER;
-            no_connections_label.get_style_context ().add_class ("h2");
-
-            var second_label = new Gtk.Label (_("Add a new VPN connection to begin."));
-            second_label.valign = Gtk.Align.CENTER;
-            second_label.wrap = true;
-            second_label.wrap_mode = Pango.WrapMode.WORD_CHAR;
-            second_label.max_width_chars = 30;
-            second_label.justify = Gtk.Justification.CENTER;
-
-            no_connections_box.add (no_connections_label);
-            no_connections_box.add (second_label);
-            no_connections_box.show_all ();
+            var placeholder = new Granite.Widgets.AlertView (
+                _("No VPN Connections"),
+                _("Add a new VPN connection to begin."),
+                ""
+            );
+            placeholder.show_all ();
 
             vpn_list = new Gtk.ListBox ();
             vpn_list.activate_on_single_click = false;
             vpn_list.visible = true;
-            vpn_list.set_placeholder (no_connections_box);
+            vpn_list.set_placeholder (placeholder);
 
             var toolbar = new Gtk.Toolbar ();
             toolbar.get_style_context ().add_class (Gtk.STYLE_CLASS_INLINE_TOOLBAR);
@@ -139,13 +125,14 @@ namespace Network {
 
             bottom_revealer.set_reveal_child (true);
 
-            this.add (top_revealer);
-            this.add (main_frame);
-            this.add (bottom_revealer);
-            this.show_all ();
+            add (top_revealer);
+            add (main_frame);
+            add (bottom_revealer);
+            show_all ();
 
-            client.notify["active-connections"].connect (update_active_connection);
             update ();
+            unowned NetworkManager network_manager = NetworkManager.get_default ();
+            network_manager.client.notify["active-connections"].connect (update_active_connection);
         }
 
         protected override void update () {
@@ -220,14 +207,14 @@ namespace Network {
                 connected_box.add (top_item);
 
                 disconnect_btn = new Gtk.Button.with_label (_("Disconnect"));
-                disconnect_btn.get_style_context ().add_class ("destructive-action");
+                disconnect_btn.get_style_context ().add_class (Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION);
                 disconnect_btn.clicked.connect (vpn_deactivate_cb);
 
                 settings_btn = new SettingsButton.from_connection (item.connection, _("Settings…"));
 
                 info_btn = new Gtk.ToggleButton ();
                 info_btn.margin_top = info_btn.margin_bottom = 6;
-                info_btn.get_style_context ().add_class ("flat");
+                info_btn.get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
                 info_btn.image = new Gtk.Image.from_icon_name ("view-more-symbolic", Gtk.IconSize.SMALL_TOOLBAR);
 
                 vpn_info_box.set_connection (item.connection);
@@ -304,7 +291,8 @@ namespace Network {
         private void update_active_connection () {
             active_connection = null;
 
-            client.get_active_connections ().foreach ((ac) => {
+            unowned NetworkManager network_manager = NetworkManager.get_default ();
+            network_manager.client.get_active_connections ().foreach ((ac) => {
                 if (ac.get_vpn () && active_connection == null) {
                     active_connection = (NM.VpnConnection)ac;
                     active_connection.vpn_state_changed.connect (update);
@@ -319,7 +307,8 @@ namespace Network {
             }
 
             update ();
-            client.activate_connection_async.begin (item.connection, null, null, null, null);
+            unowned NetworkManager network_manager = NetworkManager.get_default ();
+            network_manager.client.activate_connection_async.begin (item.connection, null, null, null, null);
         }
 
         private void vpn_deactivate_cb () {
@@ -329,8 +318,9 @@ namespace Network {
             }
 
             update ();
+            unowned NetworkManager network_manager = NetworkManager.get_default ();
             try {
-                client.deactivate_connection (active_connection);
+                network_manager.client.deactivate_connection (active_connection);
             } catch (Error e) {
                 warning (e.message);
             }

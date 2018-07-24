@@ -2,16 +2,17 @@ plug_files = files(
     'Utils.vala',
     'rfkill.vala',
     'Plug.vala',
+    'NetworkManager.vala',
     'Widgets/WifiInterface.vala',
     'Widgets/SettingsButton.vala',
     'Widgets/Page.vala',
     'Widgets/ModemInterface.vala',
-    'Widgets/InfoScreen.vala',
     'Widgets/InfoBox.vala',
     'Widgets/HotspotInterface.vala',
     'Widgets/Footer.vala',
     'Widgets/EtherInterface.vala',
     'Widgets/DeviceList.vala',
+    'Widgets/DeviceItem.vala',
     'Widgets/WifiMenuItem.vala',
     'Widgets/WidgetNMInterface.vala',
     'Widgets/NMVisualizer.vala',
@@ -22,8 +23,6 @@ plug_files = files(
     'Widgets/VPN/VPNInfoBox.vala',
     'Widgets/VPN/VPNMenuItem.vala',
     'Widgets/Hotspot/HotspotDialog.vala',
-    'Widgets/Device/DevicePage.vala',
-    'Widgets/Device/DeviceItem.vala',
     'Settings/ProxySettings.vala'
 )
 

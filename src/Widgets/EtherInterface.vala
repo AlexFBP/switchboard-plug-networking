@@ -21,12 +21,15 @@ namespace Network.Widgets {
     public class EtherInterface : Network.WidgetNMInterface {
         private Gtk.Revealer top_revealer;
 
-        public EtherInterface (NM.Client client, NM.Device device) {
-            this.init (device);
+        public EtherInterface (NM.Device device) {
+            Object (
+                device: device,
+                icon_name: "network-wired"
+            );
+        }
 
+        construct {
             info_box.halign = Gtk.Align.CENTER;
-
-            this.icon_name = "network-wired";
 
             top_revealer = new Gtk.Revealer ();
             top_revealer.valign = Gtk.Align.START;
@@ -39,6 +42,7 @@ namespace Network.Widgets {
             add (bottom_revealer);
             show_all ();
 
+            control_switch.bind_property ("active", top_revealer, "reveal-child", GLib.BindingFlags.SYNC_CREATE);
             update ();
         }
 
@@ -47,13 +51,11 @@ namespace Network.Widgets {
 
             /* At least for docker related interfaces, which can be fairly common */
             if (name.has_prefix ("veth")) {
-                display_title = _("Virtual network: %s").printf(name);
-            }
-            else {
+                display_title = _("Virtual network: %s").printf (name);
+            } else {
                 if (count <= 1) {
                     display_title = _("Ethernet");
-                }
-                else {
+                } else {
                     display_title = name;
                 }
             }
@@ -62,7 +64,6 @@ namespace Network.Widgets {
         public override void update () {
             base.update ();
 
-            top_revealer.set_reveal_child (control_switch.active);
             switch (device.state) {
                 case NM.DeviceState.UNKNOWN:
                 case NM.DeviceState.UNMANAGED:

@@ -23,8 +23,13 @@ namespace Network.Widgets {
         private Gtk.ListBoxRow[] items = {};
 
         public ExecepionsPage () {
-            this.margin_top = 10;
-            this.orientation = Gtk.Orientation.VERTICAL;
+            
+        }
+
+        construct {
+            margin_top = 10;
+            orientation = Gtk.Orientation.VERTICAL;
+
             ignored_list = new Gtk.ListBox ();
             ignored_list.vexpand = true;
             ignored_list.selection_mode = Gtk.SelectionMode.SINGLE;
@@ -38,7 +43,7 @@ namespace Network.Widgets {
 
             var ign_label = new Gtk.Label ("<b>" + _("Ignored hosts") + "</b>");
             ign_label.use_markup = true;
-            ign_label.get_style_context ().add_class ("h4");
+            ign_label.get_style_context ().add_class (Granite.STYLE_CLASS_H4_LABEL);
 
             var ign_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
             ign_box.pack_start (ign_label, false, false, 0);
@@ -48,7 +53,7 @@ namespace Network.Widgets {
 
             var add_btn = new Gtk.Button.with_label (_("Add Exception"));
             add_btn.sensitive = false;
-            add_btn.get_style_context ().add_class ("suggested-action");
+            add_btn.get_style_context ().add_class (Gtk.STYLE_CLASS_SUGGESTED_ACTION);
             add_btn.clicked.connect (() => {
                 add_exception (entry);
             });
@@ -80,6 +85,8 @@ namespace Network.Widgets {
         }
 
         private void add_exception (Gtk.Entry entry) {
+            unowned NetworkManager network_manager = NetworkManager.get_default ();
+            unowned Network.ProxySettings proxy_settings = network_manager.proxy_settings;
             string[] new_hosts = proxy_settings.ignore_hosts;
             foreach (string host in entry.get_text ().split (",")) {
                 if (host.strip () != "") {
@@ -93,13 +100,14 @@ namespace Network.Widgets {
         }
 
         private void list_exceptions () {
-            foreach (string e in proxy_settings.ignore_hosts) {
+            unowned NetworkManager network_manager = NetworkManager.get_default ();
+            foreach (string e in network_manager.proxy_settings.ignore_hosts) {
                 var row = new Gtk.ListBoxRow ();
                 var e_label = new Gtk.Label (e);
-                e_label.get_style_context ().add_class ("h3");
+                e_label.get_style_context ().add_class (Granite.STYLE_CLASS_H3_LABEL);
 
                 var remove_btn = new Gtk.Button.from_icon_name ("user-trash-symbolic", Gtk.IconSize.SMALL_TOOLBAR);
-                remove_btn.get_style_context ().add_class ("flat");
+                remove_btn.get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
 
                 remove_btn.clicked.connect (() => {
                     remove_exception (e);
@@ -118,6 +126,8 @@ namespace Network.Widgets {
 
         private void remove_exception (string exception) {
             string[] new_hosts = {};
+            unowned NetworkManager network_manager = NetworkManager.get_default ();
+            unowned Network.ProxySettings proxy_settings = network_manager.proxy_settings;
             foreach (string host in proxy_settings.ignore_hosts) {
                 if (host != exception)
                     new_hosts += host;

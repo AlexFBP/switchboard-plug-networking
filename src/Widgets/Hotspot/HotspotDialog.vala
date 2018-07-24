@@ -19,30 +19,18 @@
 
 namespace Network.Widgets {
     public class HotspotDialog : Granite.MessageDialog {
-        private const string NEW_ID = "0";
         private Gtk.Entry ssid_entry;
         private Gtk.Entry key_entry;
         private Gtk.Label ssid_label;
         private Gtk.Label key_label;
-        private Gtk.ComboBoxText conn_combo;
+        private Gtk.ComboBox conn_combo;
         private Gtk.CheckButton check_btn;
-        private Gtk.Widget create_btn;
+        private Gtk.Button create_btn;
 
-        private HashTable<string, NM.Connection> conn_hash;
+        public NM.DeviceWifi device { get; construct; }
 
-        public unowned List<NM.Connection> available { get; construct; }
-        public NM.AccessPoint? active { get; construct; }
-
-        public HotspotDialog (NM.AccessPoint? active, List<NM.Connection> available) {
-            Object (
-                active: active,
-                available: available
-            );
-        }
-
-        construct {
-            conn_hash = new HashTable<string, NM.Connection> (str_hash, str_equal);
-
+        public HotspotDialog (NM.DeviceWifi device) {
+            unowned NM.AccessPoint active = device.get_active_access_point ();
             string? ssid_str = null;
             if (active != null) {
                 ssid_str = NM.Utils.ssid_to_utf8 (active.get_ssid ().get_data ());
@@ -50,13 +38,19 @@ namespace Network.Widgets {
                 ssid_str = _("current");
             }
 
-            image_icon = new ThemedIcon ("network-wireless-hotspot");
+            Object (
+                device: device,
+                image_icon: new ThemedIcon ("network-wireless-hotspot"),
+                primary_text: _("Wireless Hotspot"),
+                secondary_text: _("Enabling Wireless Hotspot will disconnect from %s network.").printf (ssid_str) + " " +
+                    _("You will not be able to connect to a wireless network while Hotspot is active."),
+                deletable: false,
+                resizable: false,
+                window_position: Gtk.WindowPosition.CENTER_ON_PARENT
+            );
+        }
 
-            primary_text = _("Wireless Hotspot");
-
-            secondary_text = _("Enabling Wireless Hotspot will disconnect from %s network.").printf (ssid_str) + " " +
-            _("You will not be able to connect to a wireless network while Hotspot is active.");
-
+        construct {
             ssid_entry = new Gtk.Entry ();
             ssid_entry.hexpand = true;
             ssid_entry.text = GLib.Environment.get_host_name ();
@@ -77,18 +71,30 @@ namespace Network.Widgets {
             key_label = new Gtk.Label (_("Password:"));
             key_label.halign = Gtk.Align.END;
 
-            conn_combo = new Gtk.ComboBoxText ();
-            conn_combo.append (NEW_ID, _("New…"));
+            var list_store = new Gtk.ListStore (2, typeof (string), typeof (NM.Connection));
+            conn_combo = new Gtk.ComboBox.with_model (list_store);
+            var renderer = new Gtk.CellRendererText ();
+            conn_combo.pack_start (renderer, true);
+            conn_combo.add_attribute (renderer, "text", 0);
+
+            Gtk.TreeIter iter;
+            list_store.append (out iter);
+            list_store.set (iter, 0, _("New…"), -1);
 
             int i = 1;
-            foreach (var connection in available) {
-                var setting_wireless = connection.get_setting_wireless ();
-                conn_combo.append (i.to_string (), NM.Utils.ssid_to_utf8 (setting_wireless.get_ssid ().get_data ()));
-                conn_hash.insert (i.to_string (), connection);
-                i++;
-            }
+            unowned NetworkManager network_manager = NetworkManager.get_default ();
+            var connections = network_manager.client.get_connections ();
+            connections.foreach ((connection) => {
+                if (Utils.get_connection_is_hotspot (connection)) {
+                    var setting_wireless = connection.get_setting_wireless ();
+                    var ssid_name = NM.Utils.ssid_to_utf8 (setting_wireless.get_ssid ().get_data ());
+                    list_store.append (out iter);
+                    list_store.set (iter, 0, ssid_name, 1, connection);
+                    i++;
+                }
+            });
 
-            conn_combo.active_id = NEW_ID;
+            conn_combo.active = 0;
             conn_combo.changed.connect (update);
 
             var conn_label = new Gtk.Label (_("Connection:"));
@@ -110,36 +116,27 @@ namespace Network.Widgets {
 
             add_button (_("Cancel"), 0);
 
-            create_btn = add_button (_("Enable Hotspot"), 1);
-            create_btn.get_style_context ().add_class ("suggested-action");
+            create_btn = (Gtk.Button) add_button (_("Enable Hotspot"), 1);
+            create_btn.get_style_context ().add_class (Gtk.STYLE_CLASS_SUGGESTED_ACTION);
 
+            unowned NM.AccessPoint active = device.get_active_access_point ();
             if (active != null) {
-                ((Gtk.Button) create_btn).label = _("Switch to Hotspot");
+                create_btn.label = _("Switch to Hotspot");
             }
-
-            deletable = false;
-            resizable = false;
-            window_position = Gtk.WindowPosition.CENTER_ON_PARENT;
 
             update ();
         }
 
-        public ByteArray get_ssid () {
-            var byte_array = new ByteArray ();
-            byte_array.append (ssid_entry.get_text ().data);
-            return byte_array;
-        }
-
-        public string get_key () {
-            return key_entry.get_text ();
-        }
-
-        public NM.Connection? get_selected_connection () {
-            return conn_hash[conn_combo.get_active_id ()];
+        private unowned NM.Connection? get_selected_connection () {
+            unowned NM.Connection? connection;
+            Gtk.TreeIter iter;
+            conn_combo.get_active_iter (out iter);
+            conn_combo.model.get (iter, 1, out connection);
+            return connection;
         }
 
         private void update () {
-            bool sensitive = (conn_combo.get_active_id () == NEW_ID);
+            bool sensitive = (conn_combo.active == 0);
             ssid_label.sensitive = sensitive;
             key_label.sensitive = sensitive;
 
@@ -149,25 +146,24 @@ namespace Network.Widgets {
             check_btn.sensitive = sensitive;
 
             string? secret = null;
-            if (get_selected_connection () != null) {
-                var setting_wireless_security = get_selected_connection ().get_setting_wireless_security ();
+            unowned NM.Connection? selected_connection = get_selected_connection ();
+            if (selected_connection != null) {
+                unowned NM.SettingWirelessSecurity setting_wireless_security = selected_connection.get_setting_wireless_security ();
 
                 string key_mgmt = setting_wireless_security.get_key_mgmt ();
                 if (key_mgmt == "none") {
-                    secret = setting_wireless_security.get_wep_key (0);
-                } else if (key_mgmt == "wpa-psk" ||
-                            key_mgmt == "wpa-none") {
-                    secret = setting_wireless_security.get_psk ();
+                    secret = setting_wireless_security.wep_key0;
+                } else if (key_mgmt == "wpa-psk" || key_mgmt == "wpa-none") {
+                    secret = setting_wireless_security.psk;
                 }
 
                 if (secret == null) {
-                    var connection = get_selected_connection ();
-                    Utils.Hotspot.update_secrets (((NM.RemoteConnection) connection), update);
+                    Utils.update_secrets (((NM.RemoteConnection) selected_connection), update);
                 }
             }
 
-            if (conn_combo.get_active_id () != NEW_ID) {
-                ssid_entry.text = NM.Utils.ssid_to_utf8 (get_selected_connection ().get_setting_wireless ().get_ssid ().get_data ());
+            if (conn_combo.active != 0) {
+                ssid_entry.text = NM.Utils.ssid_to_utf8 (selected_connection.get_setting_wireless ().get_ssid ().get_data ());
                 if (secret == null) {
                     secret = "";
                 }
@@ -175,13 +171,34 @@ namespace Network.Widgets {
                 key_entry.text = secret;
             }
 
-            create_btn.sensitive = ((ssid_entry.get_text () != "" && key_entry.get_text ().to_utf8 ().length >= 8) || !sensitive);
+            bool key_text_over_8 = key_entry.text.length >= 8;
+            create_btn.sensitive = ((ssid_entry.get_text () != "" && key_text_over_8 ) || !sensitive);
 
-            if (key_entry.get_text ().to_utf8 ().length < 8 && key_entry.get_text () != "") {
+            if (!key_text_over_8 && key_entry.get_text () != "") {
                 key_entry.set_icon_from_icon_name (Gtk.EntryIconPosition.SECONDARY, "process-error-symbolic");
             } else {
-                key_entry.set_icon_from_icon_name (Gtk.EntryIconPosition.SECONDARY, "");
+                key_entry.set_icon_from_icon_name (Gtk.EntryIconPosition.SECONDARY, null);
             }
+        }
+
+        public override void response (int response_id) {
+            if (response_id == 1) {
+                connect_to_hotspot.begin ();
+            } else {
+                destroy ();
+            }
+        }
+
+        private async void connect_to_hotspot () {
+            unowned NetworkManager network_manager = NetworkManager.get_default ();
+            yield network_manager.activate_hotspot (
+                device,
+                ssid_entry.text,
+                key_entry.text,
+                get_selected_connection ()
+            );
+
+            destroy ();
         }
     }
 }

@@ -38,10 +38,24 @@ namespace Network.Widgets {
 
         public ConfigurationPage (Gtk.Switch _root_switch) {
             root_switch = _root_switch;
+
+            private unowned Network.ProxySettings proxy_settings;
+            private unowned Network.ProxyFTPSettings ftp_settings;
+            private unowned Network.ProxyHTTPSettings http_settings;
+            private unowned Network.ProxyHTTPSSettings https_settings;
+            private unowned Network.ProxySocksSettings socks_settings;
+
             margin_top = 12;
             halign = Gtk.Align.CENTER;
             orientation = Gtk.Orientation.VERTICAL;
             row_spacing = 12;
+
+            unowned NetworkManager network_manager = NetworkManager.get_default ();
+            proxy_settings = network_manager.proxy_settings;
+            ftp_settings = network_manager.ftp_settings;
+            http_settings = network_manager.http_settings;
+            https_settings = network_manager.https_settings;
+            socks_settings = network_manager.socks_settings;
 
             auto_button = new Gtk.RadioButton.with_label (null, _("Automatic proxy configuration"));
             manual_button = new Gtk.RadioButton.with_label_from_widget (auto_button, _("Manual proxy configuration"));
