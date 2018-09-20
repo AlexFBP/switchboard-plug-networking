@@ -34,9 +34,10 @@ namespace Network.Widgets {
         private Gtk.SpinButton ftp_spin;
         private Gtk.SpinButton socks_spin;
 
-        private Gtk.Button apply_button;
+        private Gtk.Switch root_switch;
 
-        public ConfigurationPage () {
+        public ConfigurationPage (Gtk.Switch _root_switch) {
+            root_switch = _root_switch;
             margin_top = 12;
             halign = Gtk.Align.CENTER;
             orientation = Gtk.Orientation.VERTICAL;
@@ -112,9 +113,6 @@ namespace Network.Widgets {
             spin_size_group.add_widget (http_spin);
             spin_size_group.add_widget (https_spin);
 
-            apply_button = new Gtk.Button.with_label (_("Apply"));
-            apply_button.get_style_context ().add_class (Gtk.STYLE_CLASS_SUGGESTED_ACTION);
-
             var reset_button = new Gtk.Button.with_label (_("Reset all settings"));
             reset_button.clicked.connect (on_reset_btn_clicked);
 
@@ -122,7 +120,6 @@ namespace Network.Widgets {
             apply_box.spacing = 6;
             apply_box.margin_top = 12;
             apply_box.add (reset_button);
-            apply_box.add (apply_button);
 
             var config_grid = new Gtk.Grid ();
             config_grid.orientation = Gtk.Orientation.VERTICAL;
@@ -144,7 +141,7 @@ namespace Network.Widgets {
 
             auto_button.bind_property ("active", auto_entry, "sensitive", BindingFlags.DEFAULT);
             use_all_check.bind_property ("active", other_protocols_grid, "sensitive", GLib.BindingFlags.INVERT_BOOLEAN);
-            apply_button.clicked.connect (() => apply_settings ());
+
             manual_button.bind_property ("active", config_grid, "sensitive", GLib.BindingFlags.SYNC_CREATE);
             use_all_check.notify["active"].connect (() => {
                 https_entry.text = http_entry.text;
@@ -212,30 +209,33 @@ namespace Network.Widgets {
 
         private void verify_applicable () {
             if (auto_button.active) {
-                apply_button.sensitive = auto_entry.text.strip () != "";
+                root_switch.sensitive = auto_entry.text.strip () != "";
             } else {
-                apply_button.sensitive = http_entry.text.strip () != "" ||
+                root_switch.sensitive = http_entry.text.strip () != "" ||
                                         https_entry.text.strip () != "" ||
                                         ftp_entry.text.strip () != "" ||
                                         socks_entry.text.strip () != "";
             }
         }
 
-        private void apply_settings () {
-            if (auto_button.active) {
-                proxy_settings.autoconfig_url = auto_entry.text;
-                proxy_settings.mode = "auto";
-
+        public void apply_settings () {
+            if (root_switch.active) {
+                if (auto_button.active) {
+                    proxy_settings.autoconfig_url = auto_entry.text;
+                    proxy_settings.mode = "auto";
+                } else {
+                    http_settings.host = http_entry.text;
+                    http_settings.port = (int)http_spin.value;
+                    https_settings.host = https_entry.text;
+                    https_settings.port = (int)https_spin.value;
+                    ftp_settings.host = ftp_entry.text;
+                    ftp_settings.port = (int)ftp_spin.value;
+                    socks_settings.host = socks_entry.text;
+                    socks_settings.port = (int)socks_spin.value;
+                    proxy_settings.mode = "manual";
+                }
             } else {
-                http_settings.host = http_entry.text;
-                http_settings.port = (int)http_spin.value;
-                https_settings.host = https_entry.text;
-                https_settings.port = (int)https_spin.value;
-                ftp_settings.host = ftp_entry.text;
-                ftp_settings.port = (int)ftp_spin.value;
-                socks_settings.host = socks_entry.text;
-                socks_settings.port = (int)socks_spin.value;
-                proxy_settings.mode = "manual";
+                proxy_settings.mode = "none";
             }
         }
 
